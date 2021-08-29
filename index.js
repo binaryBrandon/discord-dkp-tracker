@@ -6,7 +6,6 @@ const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_
 Tail = require('tail').Tail;
 const fileToTail = process.env.LOGFILE;
 tail = new Tail(fileToTail);
-const openStr = '[Mon Aug 23 19:07:13 2021] Udayan tells the guild, \'Opening bids on Pulsing Emerald Hoop\''
 let openItems = [];
 const openRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'[O|o]pening bids on ([A-zA-Z0-9\ \-\,]+)/;
 //[1] is time
@@ -90,16 +89,21 @@ const openItem = (message, data) => {
 }
 
 const listItems = (message) => {
-  let outString = 'Current items open for bidding:\n';
+  message.channel.send('Current items open for bidding:');
+  let outString = '';
   //console.log(openItems);
   // for (let i = 0; i < openItems.length; i++){
   //   outString += openItems[i][0] + ' — opened by ' + openItems[i][1] + ' at ' + openItems[i][2] + ' ' + process.env.TIMEZONE + '.\n';
   // }
 
   openItems.forEach(item => {
-    outString += `${item.itemName} — opened by ${item.opener} at ${item.timeOpened} ${process.env.TIMEZONE}.\n`;
+    outString += `Current bids on ${item.itemName} — opened by ${item.opener} at ${item.timeOpened} ${process.env.TIMEZONE}.\n`;
+    //console.log(outString);
+    item.currentBids.forEach(bid => {
+      outString += displayBids(message, item);
+    });
+    message.channel.send(outString);
   });
-  message.channel.send(outString);
 }
 
 const closeItem = (message, data) => {
@@ -148,6 +152,7 @@ const newBid = (message, data) => {
     bidResult[3] = bidResult[4];
     bidResult[4] = temp;
   }
+  //console.log(bidResult);
   //check if this person has bid on this item before
   // for (let i = 0; i < openItems[targetItemIndex][3].length; i++) {
   //   if (openItems[targetItemIndex][3][i] === bidResult[2]){
@@ -155,15 +160,16 @@ const newBid = (message, data) => {
   //   }
   // }
   let foundItem = openItems[targetItemIndex]
-  let bidderIndex = foundItem.currentBids.findIndex(bid => bid.name === bidResult[2]);
+  let bidderIndex = foundItem.currentBids.findIndex(bid => bid.bidderName === bidResult[2]);
+  console.log(bidderIndex);
   if (bidderIndex) {
     //add new bid object
     foundItem.currentBids.push(
       {
         bidderName: bidResult[2],
-        bidAmount: bidResult[3],
+        bidAmount: bidResult[5],
         bidderStatus: bidResult[4],
-        bidTime: bidResult[5]
+        bidTime: bidResult[1]
       });
   } else {
     //else update their bid
@@ -171,12 +177,23 @@ const newBid = (message, data) => {
     bidder.bidAmount = bidResult[3];
     bidder.bidAmount = bidResult[5];
   }
+  displayBids(message, foundItem);
 }
 
 const checkYourself = (result) => {
   if (result === 'You') {
     return process.env.YOU;
   } else return result;
+}
+
+const displayBids = (message, foundItem) => {
+  let bidsRef = foundItem.currentBids;
+  let stringToPrint = '';
+  bidsRef.sort((curr, next) => (curr.bidAmount > next.bidAmount ? -1 : 1));
+  bidsRef.forEach(bid => (stringToPrint += `${bid.bidderName} (${bid.bidderStatus}) — ${bid.bidAmount} DKP at ${bid.bidTime} ${process.env.TIMEZONE}.\n`))
+  //stringToPrint += `Top bid: ${bidsRef[0].bidderName} (${bidsRef[0].bidderStatus}) — ${bidsRef[0].bidAmount} DKP at ${bidsRef[0].bidTime} ${process.env.TIMEZONE}.`
+  // console.log(bidsRef);
+  return stringToPrint;
 }
 
 // async function initUnwatch(){
