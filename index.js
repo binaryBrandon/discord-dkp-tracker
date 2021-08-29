@@ -90,19 +90,27 @@ const openItem = (message, data) => {
 
 const listItems = (message) => {
   message.channel.send('Current items open for bidding:');
-  let outString = '';
   //console.log(openItems);
   // for (let i = 0; i < openItems.length; i++){
   //   outString += openItems[i][0] + ' — opened by ' + openItems[i][1] + ' at ' + openItems[i][2] + ' ' + process.env.TIMEZONE + '.\n';
   // }
 
   openItems.forEach(item => {
-    outString += `Current bids on ${item.itemName} — opened by ${item.opener} at ${item.timeOpened} ${process.env.TIMEZONE}.\n`;
+    let outString = ''
+    // if (item.)
+    // `Current bids on ${item.itemName} — opened by ${item.opener} at ${item.timeOpened} ${process.env.TIMEZONE}.\n`;
     //console.log(outString);
+    //console.log(`${item.itemName}\n`)
     item.currentBids.forEach(bid => {
       outString += displayBids(message, item);
+      // console.log(`outstring: ${outString}\n`);
     });
-    message.channel.send(outString);
+    // console.log(outString);
+    if (!outString) {
+      message.channel.send(`${item.itemName} — opened by ${item.opener} at ${item.timeOpened} ${process.env.TIMEZONE}.\nNo bids on this item yet.`)
+    } else if (outString) {
+      message.channel.send(`${item.itemName} — opened by ${item.opener} at ${item.timeOpened} ${process.env.TIMEZONE}.\n${outString}`);
+    }
   });
 }
 
@@ -147,10 +155,12 @@ const newBid = (message, data) => {
   });
   let temp;
   //standardize order: bidder, bid amt, app status, time of bid
-  if (Number(bidResult[4]) === NaN) {//if user put item, bid, status
-    temp = bidResult[3];
-    bidResult[3] = bidResult[4];
-    bidResult[4] = temp;
+  // console.log(bidResult);
+  if (Number(bidResult[5]) === NaN) {//if user put item, bid, status
+    // console.log(bidResult[4]);
+    temp = bidResult[4];
+    bidResult[4] = bidResult[5];
+    bidResult[5] = temp;
   }
   //console.log(bidResult);
   //check if this person has bid on this item before
@@ -161,14 +171,13 @@ const newBid = (message, data) => {
   // }
   let foundItem = openItems[targetItemIndex]
   let bidderIndex = foundItem.currentBids.findIndex(bid => bid.bidderName === bidResult[2]);
-  console.log(bidderIndex);
   if (bidderIndex) {
     //add new bid object
     foundItem.currentBids.push(
       {
         bidderName: bidResult[2],
-        bidAmount: bidResult[5],
-        bidderStatus: bidResult[4],
+        bidAmount: bidResult[4],
+        bidderStatus: bidResult[5],
         bidTime: bidResult[1]
       });
   } else {
