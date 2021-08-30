@@ -7,11 +7,11 @@ Tail = require('tail').Tail;
 const fileToTail = process.env.LOGFILE;
 tail = new Tail(fileToTail);
 let openItems = [];
-const openRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'[O|o]pening bids on ([A-zA-Z0-9\ \-\,]+)/;
+const openRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'[O|o]pening bids on ([A-zA-Z0-9\ \-\,]+)(?: > ?x2)?/;
 //[1] is time
 //[2] is person who opened bid
 //[3] is item name
-const bidRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'(.+) (main|ralt|app|fnf|alt|[0-9]+(?:x2| x2| x 2)*) (main|ralt|app|fnf|alt|[0-9]+(?:x2| x2| x 2)*)/i;
+const bidRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'(.+) (main|ralt|app|fnf|alt|[0-9]+(?:x2| x2| x 2)?) (main|ralt|app|fnf|alt|[0-9]+(?:x2| x2| x 2)?)/i;
 //[1] is time
 //[2] is person who bid
 //[3] is item name
@@ -58,12 +58,12 @@ const readLines = (message) => {
       if (bidRe.test(data)) {
         console.log(`going to newBid`)
         newBid(message, data);
-      } else if (openRe.test(data)) {
-        console.log(`going to openItem`)
-        openItem(message, data);
       } else if (closeRe.test(data)) {
         console.log(`going to closeItem`)
         closeItem(message, data);
+      } else if (openRe.test(data)) {
+        console.log(`going to openItem`)
+        openItem(message, data);
       }
     }
     //message.channel.send(`Current bid on ${openItem}: ${bidResult[1]} for ${bidResult[4]} (${bidResult[3]}) `);
