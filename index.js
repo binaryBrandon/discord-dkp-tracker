@@ -11,24 +11,23 @@ const openRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the
 //[1] is time
 //[2] is person who opened bid
 //[3] is item name
-const bidRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'(.+) (main|ralt|app|fnf|[0-9]+) (main|ralt|app|fnf|[0-9]+)/;
+const bidRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'(.+) (main|ralt|app|fnf|alt|[0-9]+(?:x2| x2| x 2)*) (main|ralt|app|fnf|alt|[0-9]+(?:x2| x2| x 2)*)/i;
 //[1] is time
 //[2] is person who bid
 //[3] is item name
 //[4] is status or bid
 //[5] is status or bid
-const closeRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'([A-zA-Z0-9\ \-\,]+) \>.*sold/;
+const closeRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'([A-zA-Z0-9\ \-\,]+) \>.*gratss/;
 //[1] is time
 //[2] is person who closed
 //[3] is item name
-const testRe = /[0-9]{2}\:[0-9]{2}\:[0-9]{2} .* [A-Z]{1}[a-z]+? (?:tells the guild|say to your guild)/;
+const testRe = /(?:tells the guild|say to your guild)/;
 
 //in order to interact with findItemIndex() et al, array syntax after any RegEx is called
 //should be [fullString, time, person(, amount/status, amount/status)]
 
 ////initUnwatch(); //this is dumb I think
 // tail.on('line', function(data) {
-//   console.log(data);
 // });
 
 client.on('ready', () => {
@@ -51,21 +50,22 @@ client.on('messageCreate', message => {
 
 const readLines = (message) => {
   tail.on('line', function(data) {
-    //console.log(data);
     //message.channel.send(data);
     //[Sat Aug 28 00:28:42 2021] You say, 'jyfkufk'
     //(date)(name)('says to guild')(item name)(status)(bid)
     if (testRe.test(data)) {
+      console.log(data);
       if (bidRe.test(data)) {
-        // console.log('working');
+        console.log(`going to newBid`)
         newBid(message, data);
       } else if (openRe.test(data)) {
+        console.log(`going to openItem`)
         openItem(message, data);
       } else if (closeRe.test(data)) {
+        console.log(`going to closeItem`)
         closeItem(message, data);
       }
     }
-    // console.log(result[3]);
     //message.channel.send(`Current bid on ${openItem}: ${bidResult[1]} for ${bidResult[4]} (${bidResult[3]}) `);
   });
 }
@@ -84,13 +84,11 @@ const openItem = (message, data) => {
     currentBids: []
   }
   openItems.push(newItem);
-  //console.log(openItems);
   message.channel.send(`Bids now open on ${newItem.itemName} (opened by ${newItem.opener}).`)
 }
 
 const listItems = (message) => {
   message.channel.send('Current items open for bidding:');
-  //console.log(openItems);
   // for (let i = 0; i < openItems.length; i++){
   //   outString += openItems[i][0] + ' — opened by ' + openItems[i][1] + ' at ' + openItems[i][2] + ' ' + process.env.TIMEZONE + '.\n';
   // }
@@ -99,13 +97,7 @@ const listItems = (message) => {
     let outString = ''
     // if (item.)
     // `Current bids on ${item.itemName} — opened by ${item.opener} at ${item.timeOpened} ${process.env.TIMEZONE}.\n`;
-    //console.log(outString);
-    //console.log(`${item.itemName}\n`)
-    item.currentBids.forEach(bid => {
-      outString += displayBids(message, item);
-      // console.log(`outstring: ${outString}\n`);
-    });
-    // console.log(outString);
+    outString += displayBids(item);
     if (!outString) {
       message.channel.send(`${item.itemName} — opened by ${item.opener} at ${item.timeOpened} ${process.env.TIMEZONE}.\nNo bids on this item yet.`)
     } else if (outString) {
@@ -123,13 +115,16 @@ const closeItem = (message, data) => {
   let targetItemIndex = openItems.findIndex(item => {
     return item.itemName === closeResult[3];
   });
-  if (targetItemIndex){
-    // console.log(targetItemIndex);
+  console.log(`targetItemIndex is ${targetItemIndex}`);
+  if (targetItemIndex !== -1){
     //closeItems.push([openResult[3],openResult[2],openResult[1]]);
-    message.channel.send(`Bids now closed on ${openItems[targetItemIndex].itemName} (closed by ${closeResult[2]}).`);
+    foundItem = openItems[targetItemIndex];
+    let outString = `Bids now closed on ${foundItem.itemName} (closed by ${closeResult[2]}).\n`
+    outString += (foundItem.currentBids[0] !== undefined ? displayBids(foundItem) : `Grats rot.`);
     openItems.splice(targetItemIndex, 1);
+    message.channel.send(outString);
   } else {
-    message.channel.send(`${closeResult[2]} tried to close bids on ${closeResult[3]}, but that item was not open (or there was a typo).`);
+    message.channel.send(`${closeResult[2]} tried to close bids on ${closeResult[3]}, but that item is not open (or there is a typo).`);
   }
 }
 
@@ -151,42 +146,45 @@ const newBid = (message, data) => {
   //   bidResult[2] = process.env.YOU;
   // }
   let targetItemIndex = openItems.findIndex(item => {
-    return item.itemName === bidResult[3];
+    return item.itemName.toLowerCase() === bidResult[3].toLowerCase();
   });
   let temp;
-  //standardize order: bidder, bid amt, app status, time of bid
-  // console.log(bidResult);
-  if (Number(bidResult[5]) === NaN) {//if user put item, bid, status
-    // console.log(bidResult[4]);
+  //standardize order: matched string, time, bidder, item, app status, bid amt
+  console.log(bidResult);
+  console.log(targetItemIndex);
+  if (isNaN(bidResult[5])) {//if user put item, bid, status
     temp = bidResult[4];
     bidResult[4] = bidResult[5];
     bidResult[5] = temp;
   }
-  //console.log(bidResult);
   //check if this person has bid on this item before
   // for (let i = 0; i < openItems[targetItemIndex][3].length; i++) {
   //   if (openItems[targetItemIndex][3][i] === bidResult[2]){
   //     openItems[targetItemIndex][3][i] = [bidResult[2],bidResult[4],bidResult[3],bidResult[1]];
   //   }
   // }
-  let foundItem = openItems[targetItemIndex]
-  let bidderIndex = foundItem.currentBids.findIndex(bid => bid.bidderName === bidResult[2]);
-  if (bidderIndex) {
-    //add new bid object
-    foundItem.currentBids.push(
-      {
-        bidderName: bidResult[2],
-        bidAmount: bidResult[4],
-        bidderStatus: bidResult[5],
-        bidTime: bidResult[1]
-      });
+  if (targetItemIndex === -1){
+    message.channel.send(`${bidResult[2]} tried to bid on ${bidResult[3]}, but that item is not open (or there is a typo).`);
   } else {
-    //else update their bid
-    let bidder = foundItem.currentBids[bidderIndex];
-    bidder.bidAmount = bidResult[3];
-    bidder.bidAmount = bidResult[5];
+    let foundItem = openItems[targetItemIndex]
+    let bidderIndex = foundItem.currentBids.findIndex(bid => bid.bidderName === bidResult[2]);
+    console.log(`bidderIndex is ${bidderIndex}`);
+    if (bidderIndex === -1) {
+      //add new bid object
+      foundItem.currentBids.push(
+        {
+          bidderName: bidResult[2],
+          bidAmount: Number(bidResult[5]),
+          bidderStatus: bidResult[4],
+          bidTime: bidResult[1]
+        });
+    } else {
+      //else update their bid
+      let bidder = foundItem.currentBids[bidderIndex];
+      bidder.bidAmount = bidResult[3];
+      bidder.bidAmount = Number(bidResult[5]);
+    }
   }
-  displayBids(message, foundItem);
 }
 
 const checkYourself = (result) => {
@@ -195,13 +193,12 @@ const checkYourself = (result) => {
   } else return result;
 }
 
-const displayBids = (message, foundItem) => {
+const displayBids = (foundItem) => {
   let bidsRef = foundItem.currentBids;
   let stringToPrint = '';
-  bidsRef.sort((curr, next) => (curr.bidAmount > next.bidAmount ? -1 : 1));
+  bidsRef.sort((curr, next) => (curr.bidAmount >= next.bidAmount ? -1 : 1));
   bidsRef.forEach(bid => (stringToPrint += `${bid.bidderName} (${bid.bidderStatus}) — ${bid.bidAmount} DKP at ${bid.bidTime} ${process.env.TIMEZONE}.\n`))
   //stringToPrint += `Top bid: ${bidsRef[0].bidderName} (${bidsRef[0].bidderStatus}) — ${bidsRef[0].bidAmount} DKP at ${bidsRef[0].bidTime} ${process.env.TIMEZONE}.`
-  // console.log(bidsRef);
   return stringToPrint;
 }
 
