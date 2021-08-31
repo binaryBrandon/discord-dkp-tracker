@@ -7,17 +7,17 @@ Tail = require('tail').Tail;
 const fileToTail = process.env.LOGFILE;
 tail = new Tail(fileToTail);
 let openItems = [];
-const openRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'[O|o]pening bids on ([A-zA-Z0-9\ \-\,]+)(?: > ?x2)?/;
+const openRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'[O|o]pening bids on ([A-zA-Z\ \-\,\']+)(?: > ?x2)?/;
 //[1] is time
 //[2] is person who opened bid
 //[3] is item name
-const bidRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'(.+) (main|ralt|app|fnf|alt|[0-9]+(?:x2| x2| x 2)?) (main|ralt|app|fnf|alt|[0-9]+(?:x2| x2| x 2)?)/i;
+const bidRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'([A-Za-z\ \-\,\']+)(main|ralt|app|fnf|alt|[0-9]+(?:(?: x 2)|(?: x2)|(?:x 2)|(?:x2))?) (main|ralt|app|fnf|alt|[0-9]+(?: x 2| x2)?)/i;
 //[1] is time
 //[2] is person who bid
 //[3] is item name
 //[4] is status or bid
 //[5] is status or bid
-const closeRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'([A-zA-Z0-9\ \-\,]+) \>.*gratss/;
+const closeRe = /([0-9]{2}\:[0-9]{2}\:[0-9]{2}) .* ([A-Z]{1}[a-z]+?) (?:tells the guild|say to your guild)\, \'([A-zA-Z\ \-\,\']+) \>.*gratss/;
 //[1] is time
 //[2] is person who closed
 //[3] is item name
@@ -55,12 +55,12 @@ const readLines = (message) => {
     //(date)(name)('says to guild')(item name)(status)(bid)
     if (testRe.test(data)) {
       console.log(data);
-      if (bidRe.test(data)) {
-        console.log(`going to newBid`)
-        newBid(message, data);
-      } else if (closeRe.test(data)) {
+      if (closeRe.test(data)) {
         console.log(`going to closeItem`)
         closeItem(message, data);
+      } else if (bidRe.test(data)) {
+        console.log(`going to newBid`)
+        newBid(message, data);
       } else if (openRe.test(data)) {
         console.log(`going to openItem`)
         openItem(message, data);
@@ -149,9 +149,10 @@ const newBid = (message, data) => {
     return item.itemName.toLowerCase() === bidResult[3].toLowerCase();
   });
   let temp;
-  //standardize order: matched string, time, bidder, item, app status, bid amt
   console.log(bidResult);
-  console.log(targetItemIndex);
+  //standardize order: matched string, time, bidder, item, app status, bid amt
+  // console.log(bidResult);
+  // console.log(targetItemIndex);
   if (isNaN(bidResult[5])) {//if user put item, bid, status
     temp = bidResult[4];
     bidResult[4] = bidResult[5];
@@ -168,7 +169,7 @@ const newBid = (message, data) => {
   } else {
     let foundItem = openItems[targetItemIndex]
     let bidderIndex = foundItem.currentBids.findIndex(bid => bid.bidderName === bidResult[2]);
-    console.log(`bidderIndex is ${bidderIndex}`);
+    // console.log(`bidderIndex is ${bidderIndex}`);
     if (bidderIndex === -1) {
       //add new bid object
       foundItem.currentBids.push(
